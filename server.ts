@@ -1,7 +1,8 @@
 import type { BbPluginApi } from '@get-bb/plugin-sdk';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { contract, policiesSchema, CHUNK, MAX_FILE } from './contract.js';
+import { contract, CHUNK, MAX_FILE } from './contract.js';
+import { configSchema, uiContract, type Configuration } from './configuration.js';
 const hostId=z.string().min(1).max(128);
 const filepath=z.string().min(1).max(4096);
 export const requestSchema=z.discriminatedUnion('operation',[
@@ -11,19 +12,37 @@ export const requestSchema=z.discriminatedUnion('operation',[
  z.object({operation:z.literal('copy'),hostId,path:filepath,destinationHostId:hostId}).strict(),
 ]);
 export default function plugin(bb:BbPluginApi){
- const settings=bb.settings.define({
-  shares:{type:'string',label:'Shared folders by host (JSON)',experimental_multiline:true,default:'{}',experimental_schema:z.string().refine(s=>{try {const policies=policiesSchema.parse(JSON.parse(s));return Object.values(policies).every(p=>[...p.roots,...p.deny].every(x=>x.startsWith('/')&&!x.includes('\0')));}catch{return false;}},'Use {"host_id":{"roots":["/absolute/folder"],"deny":[]}}')},
-  maxFileMiB:{type:'number',label:'Maximum file size (MiB)',default:256,experimental_schema:z.number().int().min(1).max(256)},
+ async function configuration(){
+  return configSchema.parse(await bb.storage.kv.get('config-v2')??{shares:{},revision:0,maxFileMiB:256});
+ }
+ async function view(){const cfg=await configuration();const machines=await bb.sdk.hosts.list();return {revision:cfg.revision,maxFileMiB:cfg.maxFileMiB,machines:machines.map(h=>({id:h.id,name:h.name,status:h.status,policy:cfg.shares[h.id]??{mode:'off' as const,roots:[],deny:[]}}))};}
+ let writes=Promise.resolve();
+ function update(revision:number,change:(cfg:Configuration)=>void){
+  const task=writes.then(async()=>{const cfg=await configuration();if(cfg.revision!==revision)throw new Error('Настройки изменились в другом окне. Обновите страницу.');change(cfg);cfg.revision++;await bb.storage.kv.set('config-v2',configSchema.parse(cfg));return view();});
+  writes=task.then(()=>{},()=>{});return task;
+ }
+ bb.rpc.register(uiContract,{
+  configuration:()=>view(),
+  saveMachine:async({hostId,revision,policy})=>{
+   if(!(await bb.sdk.hosts.list()).some(h=>h.id===hostId))throw new Error('Машина больше не подключена к BB');
+   if([...policy.roots,...policy.deny].some(p=>!p.startsWith('/')||p.includes('\0')))throw new Error('Укажите абсолютный путь к папке');
+   return update(revision,cfg=>{cfg.shares[hostId]=policy;});
+  },
+  saveLimit:({revision,maxFileMiB})=>update(revision,cfg=>{cfg.maxFileMiB=maxFileMiB;}),
+  folders:async({hostId,path})=>{
+   const result=await bb.sdk.hosts.directory({hostId,path});const folders=result.entries.filter(e=>e.kind==='directory');
+   return {directory:result.directory,parent:result.parent,entries:folders.slice(0,500).map(e=>({name:e.name,path:e.path})),truncated:folders.length>500};
+  },
  });
  const host=bb.hosts.experimental_client({contract});
  let activeCopies=0;
  async function run(raw:unknown,signal?:AbortSignal){
-  const input=requestSchema.parse(raw);const cfg=await settings.get();const policies=policiesSchema.parse(JSON.parse(cfg.shares));
+  const input=requestSchema.parse(raw);const cfg=await configuration();const policies=cfg.shares;
   const hosts=await bb.sdk.hosts.list();
-  if(input.operation==='hosts')return hosts.map(h=>({id:h.id,name:h.name,status:h.status,roots:policies[h.id]?.roots??[],configured:!!policies[h.id]}));
+  if(input.operation==='hosts')return hosts.map(h=>({id:h.id,name:h.name,status:h.status,mode:policies[h.id]?.mode??(policies[h.id]?'folders':'off'),roots:policies[h.id]?.mode==='all'?['/']:policies[h.id]?.roots??[],configured:!!policies[h.id]&&policies[h.id].mode!=='off'}));
   const ensureHost=(id:string)=>{const h=hosts.find(h=>h.id===id);if(!h)throw new Error('Unknown enrolled host');if(h.status!=='connected')throw new Error('Host is offline');};
   ensureHost(input.hostId);
-  const policy=policies[input.hostId];if(!policy?.roots.length)throw new Error('No shared folders configured for source host');
+  const policy=policies[input.hostId];if(!policy||policy.mode==='off'||(policy.mode!=='all'&&!policy.roots.length))throw new Error('No shared folders configured for source host');
   const opts={hostId:input.hostId,signal};
   if(input.operation==='list')return host.call('list',{path:input.path,policy,offset:input.offset,limit:input.limit},opts);
   if(input.operation==='read'){
@@ -35,7 +54,7 @@ export default function plugin(bb:BbPluginApi){
    }finally{await host.call('close',{token:source.token},{hostId:input.hostId}).catch(()=>{});}
   }
   ensureHost(input.destinationHostId);
-  if(!policies[input.destinationHostId])throw new Error('Destination host is not enabled in shares');
+  if(!policies[input.destinationHostId]||policies[input.destinationHostId].mode==='off')throw new Error('Destination host is not enabled in shares');
   if(activeCopies>=2)throw new Error('Two transfers are already active; retry later');
   activeCopies++;
   let sourceToken:string|undefined,destinationToken:string|undefined;
@@ -47,7 +66,7 @@ export default function plugin(bb:BbPluginApi){
    while(offset<source.size){
     signal?.throwIfAborted();
     // Settings revocations apply between chunks as well as between calls.
-    const current=await settings.get();if(current.shares!==cfg.shares||current.maxFileMiB!==cfg.maxFileMiB)throw new Error('Settings changed; restart transfer');
+    const current=await configuration();if(current.revision!==cfg.revision)throw new Error('Settings changed; restart transfer');
     const chunk=await host.call('read',{token:source.token,offset,length:CHUNK},opts);
     if(!chunk.bytes)throw new Error('Unexpected end of source');
     const bytes=Buffer.from(chunk.data,'base64');if(bytes.length!==chunk.bytes)throw new Error('Invalid source chunk');hash.update(bytes);

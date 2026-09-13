@@ -2,7 +2,7 @@
 
 Read and transfer files between enrolled BB machines using BB's existing private host RPC connection. No SSH setup, public HTTP server, or additional daemon installation is required.
 
-Status: **0.1.0-beta.1**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
+Status: **0.1.0-beta.2**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
 
 ## Install and configure
 
@@ -12,17 +12,15 @@ bb plugin build
 bb plugin install . --yes
 ```
 
-In Settings → File Gateway set **Shared folders by host**:
+Open **Settings → File Gateway → Доступ к файлам**. Each enrolled machine has its own card and three modes:
 
-```json
-{
-  "host_source": { "roots": ["/home/me/Documents"], "deny": ["/home/me/Documents/private"] },
-  "host_destination": { "roots": [], "deny": [] }
-}
-```
+- **Выключено (Off)** — no source access or incoming copies through the gateway.
+- **Выбранные папки (Selected folders)** — select directories using the remote folder browser, or enter paths under advanced settings. Exclusions and automatic sensitive-path filters apply.
+- **Всё доступно (Full computer)** — all ordinary files the BB daemon user can read, including hidden files, credentials and application settings. Ignores roots, exclusions and sensitive-name filters, follows symlinks and permits hard links. Does not grant root/admin privileges or bypass macOS permissions. Still provides file reading/copying, not arbitrary remote editing or command execution.
 
-The default `{}` shares nothing. Host IDs come from `bb machine list --json`.
-Roots and exclusions are per host, with absolute paths. Settings apply on the next call; a settings change also cancels an active copy between chunks. Root configuration belongs to the operator, not tool arguments. Destination hosts must be explicitly enabled even if they expose no source roots.
+Changes save immediately; folder selections survive switching modes. New machines start disabled. Folder browsing targets the selected machine, including from the remote web client. Offline machines can be configured by entering absolute paths. The transfer size setting is under **Передача файлов**.
+
+Settings are stored in plugin KV `config-v2`, with revision checks to prevent stale browser tabs overwriting newer edits. The unpublished beta.1 installation was migrated in place before removing its JSON setting; beta.1 was never distributed. New installs need no migration. Raw JSON is not displayed in the settings page.
 
 ## Use
 
@@ -40,10 +38,10 @@ Copies land in `<plugin-host-dataDir>/imports/<uuid>-<filename>` on the receivin
 ## Limits and access model
 
 - 256 MiB per file, adjustable downward. 512 KiB chunks, two concurrent server copies, eight sessions per host worker. Text output: up to 128 KiB; directory pages: up to 200 entries through the tool, 100 through CLI.
-- Source files must be regular files with one hard link. Symlink components are rejected. Directories are listed one level at a time; pagination assumes an unchanged directory. No recursive search or directory copy in this release.
-- Common credential paths, `.env*`, key/session files, BB/provider state and browser stores are excluded by name. This is **not secret-content detection**. Scope roots narrowly and add explicit exclusions for other sensitive locations.
+- Source files must be regular files. Selected-folders mode rejects multiple hard links and symlink components; Full computer mode permits both. Directories are listed one level at a time; pagination assumes an unchanged directory. No recursive search or directory copy in this release.
+- In selected-folders mode common credential paths, `.env*`, key/session files, BB/provider state and browser stores are excluded by name. Full computer mode disables these exclusions. This is **not secret-content detection**. Scope roots narrowly and add explicit exclusions for other sensitive locations.
 - Access inherits the trust of your BB server, enrolled machines and installed plugins. It is not an OS sandbox or a per-project isolation boundary. Authorized BB CLI users can change plugin settings. Do not share directories controlled by hostile local writers: Node's portable path checks cannot provide an atomic open-beneath guarantee against concurrent ancestor replacement.
-- Windows is not supported. Mac aliases such as `/tmp` may be symlinks; use the canonical path (for example `/private/tmp`). A missing/offline machine fails clearly, with no fallback to a different host.
+- Windows is not supported. In selected-folders mode Mac aliases such as `/tmp` may be symlinks; use the canonical path (for example `/private/tmp`). Full computer mode resolves these aliases. A missing/offline machine fails clearly, with no fallback to a different host.
 - SHA-256 verifies transmitted bytes. Source size/mtime checks detect normal concurrent edits, not adversarial changes preserving metadata. Transfers are not resumable.
 - Cancellation, idle expiry (two minutes), and graceful disposal close handles and remove partial files. A killed daemon can leave `.partial` files. Completed imports persist; monitor disk usage and remove unused files locally. Full disk/write failures abort the transfer.
 - No public routes, arbitrary remote write/delete, or file contents in logs. Logs contain host IDs and byte counts only. File text may appear in the requesting agent conversation when explicitly read.
@@ -54,17 +52,18 @@ Copies land in `<plugin-host-dataDir>/imports/<uuid>-<filename>` on the receivin
 npm ci
 npm run typecheck
 npm test
+npm run test:ui
 npm run build
 ```
 
 Tests use the public SDK backend and host harnesses and real temporary files. They cover policy, symlinks/hard links, pagination, transfer integrity, cancellation, invalid chunks, lifecycle cleanup, source edits, empty/binary files, agent/CLI routing, settings and offline hosts.
 
-Source layout: `server.ts` — settings/CLI/tool and relay; `host.ts` — host-local file operations; `policy.ts` — containment and exclusions; `contract.ts` — validated host contract. Runtime dependency: Zod. BB deploys the host bundle lazily and verifies it.
+Source layout: `app.tsx` — native settings section with vendored BB controls; `configuration.ts` — validated settings RPC; `server.ts` — settings/CLI/tool and relay; `host.ts` — host-local file operations; `policy.ts` — containment and exclusions; `contract.ts` — validated host contract. Runtime dependency: Zod. BB deploys the host bundle lazily and verifies it.
 
 See `PLUGIN_OVERVIEW.md` for marketplace copy and `RELEASE.md` for publication steps. The beta is not published by this repository alone.
 
 ## Rollback
 
-Disable with `bb plugin disable file-gateway` or set shares to `{}` to revoke all access. Disable disposes active host workers through BB lifecycle. Re-enable/reinstall the previous tag to roll back a future update. Disabling does not delete completed imports. No core BB patches are required.
+Disable with `bb plugin disable file-gateway` or choose Выключено for each machine in Settings. Disable disposes active host workers through BB lifecycle. Re-enable/reinstall the previous tag to roll back a future update. Disabling does not delete completed imports. No core BB patches are required.
 
-Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. BB databases, exported history, credentials and session stores remain excluded. Individual sensitive filenames are still excluded inside these folders.
+Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. In selected-folders mode BB databases, exported history, credentials and session stores remain excluded. Full computer mode does not apply these filters.

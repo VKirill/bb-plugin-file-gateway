@@ -6,10 +6,10 @@ Working on a server while your document is on a Mac? File Gateway lets your agen
 
 - An agent tool and `bb file-gateway` commands to discover machines, browse folders, read text and transfer files.
 - Private transfers over BB's existing host connection, with chunked delivery and SHA-256 verification.
-- Per-machine shared folders and exclusions, editable in plugin settings.
+- Native settings cards for each machine: Off, Selected folders, or Full computer. Choose remote folders without editing JSON.
 - Unique destination files: existing files are never overwritten.
 
-Nothing is shared until you configure it. Common credential paths and symbolic links are excluded. Choose trusted folders; exclusions do not scan file contents for secrets.
+Nothing is shared until you configure it. Selected folders mode excludes common credential paths and symbolic links. Full computer mode opens all files readable by BB, including hidden files and credentials, and follows links. Operating-system permissions still apply.
 
 ## Beta limits
 

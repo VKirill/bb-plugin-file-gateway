@@ -33,10 +33,11 @@ export function createEntry() {
      for await (const item of dir) {
        ctx.signal.throwIfAborted();
        try { lexicalAllowed(path.join(canonical,item.name),policy); } catch { continue; }
-       if (item.isSymbolicLink()) continue;
+       if (item.isSymbolicLink() && policy.mode !== 'all') continue;
        if (seen++ < offset) continue;
        if (entries.length === limit) { nextOffset=offset+limit; break; }
-       entries.push({name:item.name,kind:item.isFile()?'file':item.isDirectory()?'directory':'other'});
+       const details=item.isSymbolicLink()?await stat(path.join(canonical,item.name)).catch(()=>null):item;
+       entries.push({name:item.name,kind:details?.isFile()?'file':details?.isDirectory()?'directory':'other'});
      }
      return {path:canonical,entries,nextOffset};
    },
@@ -46,7 +47,7 @@ export function createEntry() {
      const file = await open(canonical,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
      try {
        const s = await file.stat();
-       if (!s.isFile() || s.nlink !== 1) throw new Error('Only regular files with a single hard link are shared');
+       if (!s.isFile() || (policy.mode !== 'all' && s.nlink !== 1)) throw new Error('Only regular files with a single hard link are shared');
        if (s.size > maxBytes) throw new Error(`File exceeds limit of ${maxBytes} bytes`);
        const token = add({file,path:canonical,size:s.size,modifiedAt:s.mtimeMs,kind:'read',offset:0,hash:createHash('sha256')});
        return {token,path:canonical,size:s.size,modifiedAt:s.mtimeMs};

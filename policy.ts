@@ -11,6 +11,8 @@ export function within(root: string, target: string) {
 export function lexicalAllowed(target: string, policy: Policy) {
   if (!path.isAbsolute(target) || target.includes('\0')) throw new Error('Use an absolute path');
   const normalized = path.resolve(target);
+  if (policy.mode === 'off') throw new Error('File access is disabled for this machine');
+  if (policy.mode === 'all') return normalized;
   const parts = normalized.split(path.sep);
   const isPrivateComponent = (part: string, index: number) => {
     if (!sensitive.test(part)) return false;
@@ -24,6 +26,7 @@ export function lexicalAllowed(target: string, policy: Policy) {
 }
 export async function checkedPath(target: string, policy: Policy) {
   const normalized = lexicalAllowed(target, policy);
+  if (policy.mode === 'all') return realpath(normalized);
   // Refuse symlink components instead of silently following them beyond a share.
   let current = path.parse(normalized).root;
   for (const part of normalized.slice(current.length).split(path.sep).filter(Boolean)) {

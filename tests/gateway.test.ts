@@ -69,7 +69,7 @@ async function serverFixture(t: Parameters<typeof fixture>[0], afterCall?: (meth
   const result=await h.experimental_call(call.method as never,call.input as never,{signal:call.signal});
   afterCall?.(call.method);return result;
  }});
- plugin(bb);t.after(()=>harness.lifecycle.dispose());return {src,dst,harness};
+ await bb.storage.kv.set('config-v2',{shares:policies,revision:0,maxFileMiB:256});plugin(bb);t.after(()=>harness.lifecycle.dispose());return {src,dst,harness};
 }
 test('server copies binary across hosts with matching SHA and unique destination',async t=>{
  const {src,dst,harness}=await serverFixture(t);const bytes=randomBytes(CHUNK*2+37);const p=path.join(src.shares,'test.bin');await writeFile(p,bytes);
@@ -88,16 +88,16 @@ test('agent tool reads text; CLI validates inputs and settings revocation',async
  const {src,harness}=await serverFixture(t);const p=path.join(src.shares,'text');await writeFile(p,'Привет');
  const result=await harness.behavior.callAgentTool('bb_file_gateway',{operation:'read',hostId:'source',path:p});assert.match(JSON.stringify(result),/Привет/);
  assert.equal((await harness.behavior.runCli(['read','source',p,'-1'])).exitCode,1);
- await harness.behavior.setSettings({shares:'{}'});
+ await harness.behavior.callRpc('saveMachine',{hostId:'source',revision:0,policy:{mode:'off',roots:[],deny:[]}});
  assert.equal((await harness.behavior.runCli(['read','source',p])).exitCode,1);
- await assert.rejects(harness.behavior.setSettings({shares:'{"x":{"roots":["relative"],"deny":[]}}'}));
+ await assert.rejects(harness.behavior.callRpc('saveMachine',{hostId:'source',revision:1,policy:{roots:['relative'],deny:[]}}));
 });
 test('offline source fails before host calls',async t=>{
  const {src,harness}=await serverFixture(t);harness.inspection.sdk.stub('hosts.list',async()=>[makeHostResponse({id:'source',status:'disconnected'})]);
  const r=await harness.behavior.runCli(['read','source',path.join(src.shares,'x')]);assert.equal(r.exitCode,1);assert.match(r.stderr!,/offline/);
 });
 test('public SDK only',async()=>{
- const result=await experimental_scanPublicSdkOnly(path.resolve('.'));assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
+ const result=await experimental_scanPublicSdkOnly(path.resolve('.'),{allow:['react','@radix-ui/react-slot','class-variance-authority','clsx','tailwind-merge','vitest','@testing-library/react'].map(x=>new RegExp('^'+x+'$'))});assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
 });
 
 test('conversation artifacts can be shared without exposing BB history or credentials',()=>{
@@ -112,4 +112,26 @@ test('abort during relayed transfer removes destination partial',async t=>{
  const p=path.join(src.shares,'large.bin');await writeFile(p,randomBytes(CHUNK+20));
  const result=await harness.behavior.runCli(['copy','source',p,'destination'],{signal:controller.signal});
  assert.equal(result.exitCode,1);assert.deepEqual(await readdir(path.join(dst.data,'imports')),[]);
+});
+
+test('full mode reads hidden files and follows symlinks and hard links outside roots',async t=>{
+ const f=await fixture(t);const p=path.join(f.root,'.env');await writeFile(p,'synthetic fixture only');
+ const alias=path.join(f.shares,'alias');await symlink(p,alias);await link(p,path.join(f.shares,'hard'));
+ for(const target of [p,alias,path.join(f.shares,'hard')]){
+  const s=await f.h.experimental_call('open',{path:target,policy:{mode:'all',roots:[],deny:[f.root]},maxBytes:100});
+  const r=await f.h.experimental_call('read',{token:s.token,offset:0,length:100});assert.equal(Buffer.from(r.data,'base64').toString(),'synthetic fixture only');await f.h.experimental_call('close',{token:s.token});
+ }
+});
+test('disabled mode denies all paths even with roots',()=>{
+ assert.throws(()=>lexicalAllowed('/work/a',{mode:'off',roots:['/'],deny:[]}));
+});
+test('configuration updates preserve other hosts and reject stale revisions',async t=>{
+ const {harness}=await serverFixture(t);
+ const before=await harness.behavior.callRpc('configuration',null) as any;
+ assert.equal(before.machines[0].policy.roots.length,1);
+ await harness.behavior.callRpc('saveMachine',{hostId:'source',revision:0,policy:{mode:'all',roots:[],deny:[]}});
+ const after=await harness.behavior.callRpc('configuration',null) as any;
+ assert.equal(after.machines[0].policy.mode,'all');assert.deepEqual(after.machines[1],before.machines[1]);
+ await assert.rejects(harness.behavior.callRpc('saveMachine',{hostId:'destination',revision:0,policy:{mode:'off',roots:[],deny:[]}}));
+ await assert.rejects(harness.behavior.callRpc('saveMachine',{hostId:'unknown',revision:1,policy:{mode:'all',roots:[],deny:[]}}));
 });

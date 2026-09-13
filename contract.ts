@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const CHUNK = 512 * 1024;
 export const MAX_FILE = 256 * 1024 * 1024;
 const path = z.string().min(1).max(4096);
-export const policySchema = z.object({ roots: z.array(path).max(100), deny: z.array(path).max(100) }).strict();
+export const policySchema = z.object({ mode: z.enum(['off','folders','all']).optional(), roots: z.array(path).max(100), deny: z.array(path).max(100) }).strict();
 export const policiesSchema = z.record(z.string().min(1), policySchema);
 export const infoSchema = z.object({ path, size: z.number(), modifiedAt: z.number() });
 const token = z.string().uuid();
