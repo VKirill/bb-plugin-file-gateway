@@ -2,12 +2,12 @@
 
 Read and transfer files between enrolled BB machines using BB's existing private host RPC connection. No SSH setup, public HTTP server, or additional daemon installation is required.
 
-Status: **0.1.0-beta.3**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
+Status: **0.1.0-beta.4**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
 
 ## Install and configure
 
 ```sh
-bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@v0.1.0-beta.3 --yes
+bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@v0.1.0-beta.4 --yes
 ```
 
 Open **Settings → File Gateway → Доступ к файлам**. Each enrolled machine has its own card and three modes:

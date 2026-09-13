@@ -1,6 +1,7 @@
 import React,{useState,useEffect,useRef} from 'react';
 import {useRpc,useComposer} from '@get-bb/plugin-sdk/app';
-import {explorerContract,encodeReference} from './explorer-contract.js';
+import type {explorerContract} from './explorer-contract.js';
+import {encodeReference} from './reference.js';
 import {Button} from './components/ui/button.js';
 type Machine={id:string;name:string;status:string;roots:string[];configured:boolean};
 function Folder({machine,path,label}:{machine:Machine;path:string;label:string}){
