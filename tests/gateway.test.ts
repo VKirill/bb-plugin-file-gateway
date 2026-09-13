@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { experimental_createHostEntryHarness } from '@get-bb/plugin-sdk/testing/host';
-import { createFakePluginHost, makeHostResponse, experimental_scanPublicSdkOnly } from '@get-bb/plugin-sdk/testing';
+import { createFakePluginHost, makeHostResponse, makeThreadResponse, experimental_scanPublicSdkOnly } from '@get-bb/plugin-sdk/testing';
 import { createEntry } from '../host.js';
 import plugin from '../server.js';
 import { lexicalAllowed } from '../policy.js';
@@ -64,7 +64,7 @@ test('worker disposal deletes incomplete transfers',async t=>{
 async function serverFixture(t: Parameters<typeof fixture>[0], afterCall?: (method:string)=>void){
  const src=await fixture(t),dst=await fixture(t);
  const policies={source:src.policy,destination:dst.policy};
- const {bb,harness}=createFakePluginHost({pluginId:'file-gateway',experimental_hostEntry:true,settings:{shares:JSON.stringify(policies)},sdk:{hosts:{list:async()=>[makeHostResponse({id:'source',name:'Source',status:'connected'}),makeHostResponse({id:'destination',name:'Destination',status:'connected'})]}},experimental_callHostRpc:async call=>{
+ const {bb,harness}=createFakePluginHost({pluginId:'file-gateway',experimental_hostEntry:true,settings:{shares:JSON.stringify(policies)},sdk:{threads:{get:async()=>makeThreadResponse({environmentId:'env-destination'})},environments:{get:async()=>({id:'env-destination',hostId:'destination'} as any)},hosts:{list:async()=>[makeHostResponse({id:'source',name:'Source',status:'connected'}),makeHostResponse({id:'destination',name:'Destination',status:'connected'})]}},experimental_callHostRpc:async call=>{
   const h=call.hostId==='source'?src.h:dst.h;
   const result=await h.experimental_call(call.method as never,call.input as never,{signal:call.signal});
   afterCall?.(call.method);return result;
@@ -141,3 +141,5 @@ test('native preview returns the exact permitted host path and rejects disabled 
  await harness.behavior.callRpc('saveMachine',{hostId:'source',revision:0,policy:{mode:'off',roots:[],deny:[]}});
  await assert.rejects(harness.behavior.callRpc('preview',{hostId:'source',path:target}),/disabled/);
 });
+
+test('preview copies a different source onto the current chat machine',async t=>{const {src,dst,harness}=await serverFixture(t);const p=path.join(src.shares,'preview.txt');await writeFile(p,'preview fixture');const result=await harness.behavior.callRpc('preview',{hostId:'source',path:p,threadId:'thread'}) as {hostId:string;path:string};assert.equal(result.hostId,'destination');assert.ok(result.path.startsWith(dst.data));assert.equal(await readFile(result.path,'utf8'),'preview fixture');});

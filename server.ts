@@ -108,7 +108,9 @@ export default function plugin(bb:BbPluginApi){
  }
  bb.rpc.register(explorerContract,{
   preview:async ref=>{
-   if(ref.hostId.startsWith('remote_')){const destinationHostId=(await bb.sdk.system.config()).primaryHostId;if(!destinationHostId)throw new Error('No primary BB machine available for preview');const result=await run({operation:'copy',...ref,destinationHostId}) as {destination:{hostId:string;path:string}};return {hostId:result.destination.hostId,path:result.destination.path};}
+   let destinationHostId:string|undefined;
+   if(ref.threadId){const thread=await bb.sdk.threads.get({threadId:ref.threadId});if(!thread.environmentId)throw new Error("У чата не выбрана машина для просмотра");const environment=await bb.sdk.environments.get({environmentId:thread.environmentId});destinationHostId=environment.hostId;}
+   if(ref.hostId.startsWith('remote_')||(destinationHostId&&destinationHostId!==ref.hostId)){destinationHostId??=(await bb.sdk.system.config()).primaryHostId??undefined;if(!destinationHostId)throw new Error('No BB machine available for preview');const result=await run({operation:'copy',hostId:ref.hostId,path:ref.path,destinationHostId}) as {destination:{hostId:string;path:string}};return {hostId:result.destination.hostId,path:result.destination.path};}
    const cfg=await configuration();const policy=cfg.shares[ref.hostId];if(!policy||policy.mode==='off')throw new Error('File access disabled');const opened=await host.call('open',{path:ref.path,policy,maxBytes:cfg.maxFileMiB*1024*1024},{hostId:ref.hostId});await host.call('close',{token:opened.token},{hostId:ref.hostId});return {hostId:ref.hostId,path:opened.path};
   },
   machines:async()=>await run({operation:'hosts'}) as any,
