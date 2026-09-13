@@ -23,14 +23,14 @@ export default function plugin(bb:BbPluginApi){
  async function view(){const cfg=await configuration();const machines=await bb.sdk.hosts.list();return {revision:cfg.revision,maxFileMiB:cfg.maxFileMiB,machines:machines.map(h=>({id:h.id,name:h.name,status:h.status,policy:cfg.shares[h.id]??{mode:'off' as const,roots:[],deny:[]}}))};}
  let writes=Promise.resolve();
  function update(revision:number,change:(cfg:Configuration)=>void){
-  const task=writes.then(async()=>{const cfg=await configuration();if(cfg.revision!==revision)throw new Error('Настройки изменились в другом окне. Обновите страницу.');change(cfg);cfg.revision++;await bb.storage.kv.set('config-v2',configSchema.parse(cfg));return view();});
+  const task=writes.then(async()=>{const cfg=await configuration();if(cfg.revision!==revision)throw new Error('Settings changed in another window. Refresh the page.');change(cfg);cfg.revision++;await bb.storage.kv.set('config-v2',configSchema.parse(cfg));return view();});
   writes=task.then(()=>{},()=>{});return task;
  }
  bb.rpc.register(uiContract,{
   configuration:()=>view(),
   saveMachine:async({hostId,revision,policy})=>{
-   if(!(await bb.sdk.hosts.list()).some(h=>h.id===hostId))throw new Error('Машина больше не подключена к BB');
-   if([...policy.roots,...policy.deny].some(p=>!p.startsWith('/')||p.includes('\0')))throw new Error('Укажите абсолютный путь к папке');
+   if(!(await bb.sdk.hosts.list()).some(h=>h.id===hostId))throw new Error('This machine is no longer connected to BB');
+   if([...policy.roots,...policy.deny].some(p=>!p.startsWith('/')||p.includes('\0')))throw new Error('Enter an absolute folder path');
    return update(revision,cfg=>{cfg.shares[hostId]=policy;});
   },
   saveLimit:({revision,maxFileMiB})=>update(revision,cfg=>{cfg.maxFileMiB=maxFileMiB;}),
@@ -109,7 +109,7 @@ export default function plugin(bb:BbPluginApi){
  bb.rpc.register(explorerContract,{
   preview:async ref=>{
    let destinationHostId:string|undefined;
-   if(ref.threadId){const thread=await bb.sdk.threads.get({threadId:ref.threadId});if(!thread.environmentId)throw new Error("У чата не выбрана машина для просмотра");const environment=await bb.sdk.environments.get({environmentId:thread.environmentId});destinationHostId=environment.hostId;}
+   if(ref.threadId){const thread=await bb.sdk.threads.get({threadId:ref.threadId});if(!thread.environmentId)throw new Error("No machine is selected for file preview in this chat");const environment=await bb.sdk.environments.get({environmentId:thread.environmentId});destinationHostId=environment.hostId;}
    if(ref.hostId.startsWith('remote_')||(destinationHostId&&destinationHostId!==ref.hostId)){destinationHostId??=(await bb.sdk.system.config()).primaryHostId??undefined;if(!destinationHostId)throw new Error('No BB machine available for preview');const result=await run({operation:'copy',hostId:ref.hostId,path:ref.path,destinationHostId}) as {destination:{hostId:string;path:string}};return {hostId:result.destination.hostId,path:result.destination.path};}
    const cfg=await configuration();const policy=cfg.shares[ref.hostId];if(!policy||policy.mode==='off')throw new Error('File access disabled');const opened=await host.call('open',{path:ref.path,policy,maxBytes:cfg.maxFileMiB*1024*1024},{hostId:ref.hostId});await host.call('close',{token:opened.token},{hostId:ref.hostId});return {hostId:ref.hostId,path:opened.path};
   },

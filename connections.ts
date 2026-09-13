@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {connectionSchema,connectionsContract,type Connection} from './connections-contract.js';
 import {withRemote,remotePath,downloadBounded} from './remote.js';
 export function registerConnections(bb:BbPluginApi){
- const secrets=bb.settings.define({connectionVault:{type:'string',label:'Хранилище паролей подключений',description:'Управляется формой подключений File Gateway. Не изменяйте вручную.',secret:true}});
+ const secrets=bb.settings.define({connectionVault:{type:'string',label:'Connection password vault',description:'Managed by the File Gateway connection form. Do not edit manually.',secret:true}});
  const schema=z.array(connectionSchema).max(30);
  async function connections(){return schema.parse(await bb.storage.kv.get('connections-v1')??[]);}
  async function passwords(){const raw=(await secrets.get()).connectionVault;return z.record(z.string(),z.string()).parse(raw?JSON.parse(raw):{});}

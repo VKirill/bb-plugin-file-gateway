@@ -23,5 +23,5 @@ export function GatewayDropTarget(){
   document.addEventListener('dragover',over,true);document.addEventListener('drop',drop,true);window.addEventListener(DRAG_EVENT,dragging);window.addEventListener('dragend',stop);
   return()=>{document.removeEventListener('dragover',over,true);document.removeEventListener('drop',drop,true);window.removeEventListener(DRAG_EVENT,dragging);window.removeEventListener('dragend',stop);};
  },[composer]);
- return <div ref={marker} data-file-gateway-drop-target="" className={active?'rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground':'hidden'}>{active?'Перетащите сюда файл или папку':''}</div>;
+ return <div ref={marker} data-file-gateway-drop-target="" className={active?'rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground':'hidden'}>{active?'Drop a file or folder here':''}</div>;
 }

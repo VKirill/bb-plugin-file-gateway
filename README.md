@@ -10,23 +10,23 @@ Status: **0.1.0-beta.4**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses expe
 bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@v0.1.0-beta.4 --yes
 ```
 
-Open **Settings → File Gateway → Доступ к файлам**. Each enrolled machine has its own card and three modes:
+Open **Settings → File Gateway → File access**. Each enrolled machine has its own card and three modes:
 
-- **Выключено (Off)** — no source access or incoming copies through the gateway.
-- **Выбранные папки (Selected folders)** — select directories using the remote folder browser, or enter paths under advanced settings. Exclusions and automatic sensitive-path filters apply.
-- **Всё доступно (Full computer)** — all ordinary files the BB daemon user can read, including hidden files, credentials and application settings. Ignores roots, exclusions and sensitive-name filters, follows symlinks and permits hard links. Does not grant root/admin privileges or bypass macOS permissions. Still provides file reading/copying, not arbitrary remote editing or command execution.
+- **Off** — no source access or incoming copies through the gateway.
+- **Selected folders** — select directories using the remote folder browser, or enter paths under advanced settings. Exclusions and automatic sensitive-path filters apply.
+- **Full computer** — all ordinary files the BB daemon user can read, including hidden files, credentials and application settings. Ignores roots, exclusions and sensitive-name filters, follows symlinks and permits hard links. Does not grant root/admin privileges or bypass macOS permissions. Still provides file reading/copying, not arbitrary remote editing or command execution.
 
-Changes save immediately; folder selections survive switching modes. New machines start disabled. Folder browsing targets the selected machine, including from the remote web client. Offline machines can be configured by entering absolute paths. The transfer size setting is under **Передача файлов**.
+Changes save immediately; folder selections survive switching modes. New machines start disabled. Folder browsing targets the selected machine, including from the remote web client. Offline machines can be configured by entering absolute paths. The transfer size setting is under **File transfers**.
 
 Settings are stored in plugin KV `config-v2`, with revision checks to prevent stale browser tabs overwriting newer edits. New installs start with all machines disabled. Raw JSON is not displayed in the settings page.
 
 ## File tree and chat references
 
-In a chat, click the folder icon in the top header to open **Файлы подключений** in the native right panel. Choose a machine or website from the dropdown above the tree, the first level opens automatically. Nested folders expand on demand. On the New thread screen, open the right panel and choose **Файлы подключений** from a new tab. The hidden-files checkbox hides dot-prefixed entries by default and remembers your preference in this browser. Drag a file or folder into the chat composer to insert its native mention. Double-click a file to open BB’s native file viewer in a right-panel tab; files from other machines and websites are first downloaded to the current chat’s machine under the configured transfer limits. The native preview requires an existing chat; browsing and mentions also work before creating one. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
+In a chat, click the folder icon in the top header to open **Connected Files** in the native right panel. Choose a machine or website from the dropdown above the tree, the first level opens automatically. Nested folders expand on demand. On the New thread screen, open the right panel and choose **Connected Files** from a new tab. The hidden-files checkbox hides dot-prefixed entries by default and remembers your preference in this browser. Drag a file or folder into the chat composer to insert its native mention. Double-click a file to open BB’s native file viewer in a right-panel tab; files from other machines and websites are first downloaded to the current chat’s machine under the configured transfer limits. The native preview requires an existing chat; browsing and mentions also work before creating one. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
 
 ## Website connections
 
-Open **Settings → File Gateway → FTP и SFTP → Добавить подключение**. Enter a name, protocol, address, port, username, password and accessible root. Save, then use **Проверить**. FTPS uses explicit TLS with certificate verification. SFTP requires a SHA-256 server host-key fingerprint (64 hexadecimal characters) and supports password authentication in this beta. Plain FTP is available for legacy accounts and sends credentials and data without encryption.
+Open **Settings → File Gateway → FTP and SFTP → Add connection**. Enter a name, protocol, address, port, username, password and accessible root. Save, then use **Test connection**. FTPS uses explicit TLS with certificate verification. SFTP requires a SHA-256 server host-key fingerprint (64 hexadecimal characters) and supports password authentication in this beta. Plain FTP is available for legacy accounts and sends credentials and data without encryption.
 
 Connections originate from the BB server machine, which must reach the website. They appear in the same tree and `hosts` output with IDs `remote_<uuid>`. These IDs work as source `hostId` values in `list`, `read` and `copy`; destinations must be enrolled BB machines. A saved enabled connection is not a live availability check. Passwords use BB secret settings (0600 server files), never the connection KV record, frontend read responses or agent context. The native generic secret field is the internal vault; manage passwords through the connection form.
 
@@ -74,8 +74,8 @@ See `PLUGIN_OVERVIEW.md` for marketplace copy and `RELEASE.md` for publication s
 
 ## Rollback
 
-Disable with `bb plugin disable file-gateway` or choose Выключено for each machine in Settings. Disable disposes active host workers through BB lifecycle. Re-enable/reinstall the previous tag to roll back a future update. Disabling does not delete completed imports. No core BB patches are required.
+Disable with `bb plugin disable file-gateway` or choose Off for each machine in Settings. Disable disposes active host workers through BB lifecycle. Re-enable/reinstall the previous tag to roll back a future update. Disabling does not delete completed imports. No core BB patches are required.
 
 Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. In selected-folders mode BB databases, exported history, credentials and session stores remain excluded. Full computer mode does not apply these filters.
 
-The initial settings UI uses Russian labels; this README explains their English equivalents.
+The plugin interface, documentation and agent instructions are in English. User-defined machine names, connection names and file paths retain their original language.
