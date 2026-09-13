@@ -22,7 +22,7 @@ Settings are stored in plugin KV `config-v2`, with revision checks to prevent st
 
 ## File tree and chat references
 
-In a chat, click the folder icon in the top header to open **Файлы подключений** in the native right panel. Choose a machine or website from the dropdown above the tree, then expand its folders. On the New thread screen, open the right panel and choose **Файлы подключений** from a new tab. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
+In a chat, click the folder icon in the top header to open **Файлы подключений** in the native right panel. Choose a machine or website from the dropdown above the tree, the first level opens automatically. Nested folders expand on demand. On the New thread screen, open the right panel and choose **Файлы подключений** from a new tab. The hidden-files checkbox hides dot-prefixed entries by default and remembers your preference in this browser. Drag a file or folder into the chat composer to insert its native mention. Double-click a file to open BB’s native file viewer in a right-panel tab; website files are first downloaded to the primary BB machine under the configured transfer limits. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
 
 ## Website connections
 

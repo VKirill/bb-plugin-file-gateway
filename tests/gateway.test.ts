@@ -97,7 +97,7 @@ test('offline source fails before host calls',async t=>{
  const r=await harness.behavior.runCli(['read','source',path.join(src.shares,'x')]);assert.equal(r.exitCode,1);assert.match(r.stderr!,/offline/);
 });
 test('public SDK only',async()=>{
- const result=await experimental_scanPublicSdkOnly(path.resolve('.'),{allow:['basic-ftp','ssh2-sftp-client','ftp-srv','ssh2','react','@radix-ui/react-slot','class-variance-authority','clsx','tailwind-merge','vitest','@testing-library/react'].map(x=>new RegExp('^'+x+'$'))});assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
+ const result=await experimental_scanPublicSdkOnly(path.resolve('.'),{allow:['@hugeicons/react','@hugeicons/core-free-icons','@radix-ui/react-select','basic-ftp','ssh2-sftp-client','ftp-srv','ssh2','react','@radix-ui/react-slot','class-variance-authority','clsx','tailwind-merge','vitest','@testing-library/react'].map(x=>new RegExp('^'+x+'$'))});assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
 });
 
 test('conversation artifacts can be shared without exposing BB history or credentials',()=>{
@@ -134,4 +134,10 @@ test('configuration updates preserve other hosts and reject stale revisions',asy
  assert.equal(after.machines[0].policy.mode,'all');assert.deepEqual(after.machines[1],before.machines[1]);
  await assert.rejects(harness.behavior.callRpc('saveMachine',{hostId:'destination',revision:0,policy:{mode:'off',roots:[],deny:[]}}));
  await assert.rejects(harness.behavior.callRpc('saveMachine',{hostId:'unknown',revision:1,policy:{mode:'all',roots:[],deny:[]}}));
+});
+test('native preview returns the exact permitted host path and rejects disabled access',async t=>{
+ const {harness,src}=await serverFixture(t);const target=path.join(src.shares,'preview.txt');await writeFile(target,'preview text');
+ assert.deepEqual(await harness.behavior.callRpc('preview',{hostId:'source',path:target}),{hostId:'source',path:target});
+ await harness.behavior.callRpc('saveMachine',{hostId:'source',revision:0,policy:{mode:'off',roots:[],deny:[]}});
+ await assert.rejects(harness.behavior.callRpc('preview',{hostId:'source',path:target}),/disabled/);
 });

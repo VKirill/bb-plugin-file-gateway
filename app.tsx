@@ -1,3 +1,4 @@
+import {GatewayDropTarget} from './drag-to-chat.js';
 import {ConnectionSettings} from './connections-ui.js';
 import {GatewayExplorer,GatewayHeaderButton} from './explorer.js';
 import React,{useEffect,useState} from 'react';
@@ -67,4 +68,4 @@ export function GatewaySettings(){
   <p role="status" className="min-h-4 text-xs text-muted-foreground">{busy?'Сохранение…':saved?'Сохранено. Настройки применяются сразу.':''}</p>
  </div>;
 }
-export default definePluginApp(app=>{app.slots.experimental_threadHeaderAction({id:'open-files',title:'Файлы подключений',component:GatewayHeaderButton});app.slots.threadPanelAction({id:'explorer',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.experimental_newThreadPanelAction({id:'explorer-new',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.settingsSection({id:'connections',title:'FTP и SFTP',component:ConnectionSettings});app.slots.settingsSection({id:'file-access',title:'Доступ к файлам',component:GatewaySettings});});
+export default definePluginApp(app=>{app.composer.customize({id:'file-drop',banners:[{id:'file-drop',chrome:'bare',component:GatewayDropTarget}]});app.slots.experimental_threadHeaderAction({id:'open-files',title:'Файлы подключений',component:GatewayHeaderButton});app.slots.threadPanelAction({id:'explorer',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.experimental_newThreadPanelAction({id:'explorer-new',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.settingsSection({id:'connections',title:'FTP и SFTP',component:ConnectionSettings});app.slots.settingsSection({id:'file-access',title:'Доступ к файлам',component:GatewaySettings});});
