@@ -1,6 +1,7 @@
-## Your files, across your BB machines
+## File Gateway for BB — Cross-Machine Files, Remote Mentions & FTP/SFTP Explorer
 
 Working on a server while your document is on a Mac? File Gateway lets your agent list a shared folder, read text, or copy a file to another enrolled machine without setting up SSH or publishing a download link.
+
 
 ## What it provides
 

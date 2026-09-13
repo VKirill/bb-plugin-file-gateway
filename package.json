@@ -56,6 +56,20 @@
     "build": "bb plugin build",
     "test:ui": "vitest run tests/*.test.tsx"
   },
+  "description": "Browse BB machines and FTP/SFTP sites, insert remote file mentions into chat, and let agents read or transfer files securely over host RPC.",
+  "keywords": [
+    "bb",
+    "bb-plugin",
+    "file-gateway",
+    "file-transfer",
+    "sftp",
+    "ftp",
+    "ftps",
+    "remote-files",
+    "file-explorer",
+    "file-manager",
+    "developer-tools"
+  ],
   "license": "MIT",
   "author": {
     "name": "VKirill",

@@ -1,8 +1,13 @@
-# File Gateway
+# File Gateway for BB — Secure Cross-Machine File Access, Remote Mentions & FTP/SFTP Explorer
 
-Read and transfer files between enrolled BB machines using BB's existing private host RPC connection. No SSH setup, public HTTP server, or additional daemon installation is required.
+[![BB Compatibility](https://img.shields.io/badge/BB-%3E%3D0.43-blue.svg)](https://getbb.app)
+[![Plugin SDK](https://img.shields.io/badge/Plugin%20SDK-%3E%3D0.4.87-green.svg)](https://getbb.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/VKirill/bb-plugin-file-gateway?include_prereleases&color=orange)](https://github.com/VKirill/bb-plugin-file-gateway/releases)
 
-Status: **0.1.0-beta.4**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
+> Read, browse, and transfer files between enrolled BB machines and FTP/SFTP sites using BB's existing private host RPC connection. No SSH setup, public HTTP server, or additional daemon installation is required.
+
+Status: **0.1.0-beta.5**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
 
 ## Install and configure
 
@@ -79,3 +84,7 @@ Disable with `bb plugin disable file-gateway` or choose Off for each machine in 
 Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. In selected-folders mode BB databases, exported history, credentials and session stores remain excluded. Full computer mode does not apply these filters.
 
 The plugin interface, documentation and agent instructions are in English. User-defined machine names, connection names and file paths retain their original language.
+
+## Tags & Ecosystem
+`bb`, `bb-plugin`, `file-gateway`, `file-transfer`, `sftp`, `ftp`, `ftps`, `remote-files`, `file-explorer`, `file-manager`, `developer-tools`
+
