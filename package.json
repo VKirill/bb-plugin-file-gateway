@@ -1,0 +1,39 @@
+{
+  "name": "bb-plugin-file-gateway",
+  "version": "0.1.0-beta.1",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.43",
+    "bbPluginSdk": ">=0.4.87"
+  },
+  "bb": {
+    "name": "File Gateway",
+    "description": "Read and transfer files between enrolled BB machines through the existing private host connection.",
+    "branding": {
+      "icon": "Folder"
+    },
+    "server": "./server.ts",
+    "host": "./host.ts",
+    "skills": [
+      "skills"
+    ]
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.4.87",
+    "@types/node": "^22.0.0",
+    "better-sqlite3": "^12.0.0",
+    "cron-parser": "^5.10.1",
+    "hono": "^4.13.7",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.0"
+  },
+  "scripts": {
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "bb plugin build"
+  },
+  "license": "MIT"
+}
