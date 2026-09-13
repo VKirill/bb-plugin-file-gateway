@@ -4,11 +4,12 @@ import type {explorerContract} from './explorer-contract.js';
 import {encodeReference} from './reference.js';
 import {Button} from './components/ui/button.js';
 type Machine={id:string;name:string;status:string;roots:string[];configured:boolean};
-function Folder({machine,path,label}:{machine:Machine;path:string;label:string}){
+function Folder({machine,path,label,initialOpen=false}:{machine:Machine;path:string;label:string;initialOpen?:boolean}){
  const rpc=useRpc<typeof explorerContract>();const composer=useComposer();
- const [open,setOpen]=useState(false);const [entries,setEntries]=useState<{name:string;kind:'file'|'directory'|'other'}[]>([]);const [next,setNext]=useState<number|null>(null);const [loaded,setLoaded]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const mounted=useRef(true);
+ const [open,setOpen]=useState(initialOpen);const [entries,setEntries]=useState<{name:string;kind:'file'|'directory'|'other'}[]>([]);const [next,setNext]=useState<number|null>(null);const [loaded,setLoaded]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  async function load(offset=0){setBusy(true);setError('');try{const result=await rpc.call('list',{hostId:machine.id,path,offset});if(mounted.current){setEntries(previous=>offset?[...previous,...result.entries]:result.entries);setNext(result.nextOffset);setLoaded(true);}}catch(e){if(mounted.current)setError(e instanceof Error?e.message:String(e));}finally{if(mounted.current)setBusy(false);}}
+ useEffect(()=>{if(initialOpen)void load();},[]);
  function add(target:string){composer.insertMention({provider:'files',id:encodeReference({hostId:machine.id,path:target}),label:`${machine.name}: ${target}`});composer.focus();}
  return <div className="min-w-0">
   <div className="flex items-center gap-1"><button type="button" className="min-w-0 flex-1 truncate rounded px-2 py-1.5 text-left text-sm hover:bg-muted" title={path} aria-expanded={open} onClick={()=>{setOpen(!open);if(!open&&!loaded)void load();}}>{open?'▾':'▸'} {label}</button><Button size="sm" variant="ghost" aria-label={`В чат: ${machine.name}:${path}`} onClick={()=>add(path)}>＋</Button></div>
@@ -32,6 +33,6 @@ export function GatewayExplorer(){
  const machine=machines.find(m=>m.id===selected);
  return <div className="flex h-full flex-col" aria-label="Файлы подключений">
   <div className="shrink-0 space-y-2 border-b border-border p-3"><div className="flex items-center gap-2"><select aria-label="Сервер или FTP-подключение" className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm text-foreground" value={selected} onChange={e=>setSelected(e.target.value)}>{!machines.length&&<option value="">Загрузка подключений…</option>}{machines.map(m=><option key={m.id} value={m.id}>{m.name}{!m.configured?' — выключено':!['connected','configured'].includes(m.status)?' — не в сети':''}</option>)}</select><Button size="sm" variant="ghost" aria-label="Обновить подключения" onClick={()=>setVersion(v=>v+1)}>↻</Button></div><p className="text-xs text-muted-foreground">＋ добавляет файл или папку в сообщение</p></div>
-  <div className="min-h-0 flex-1 overflow-auto p-2">{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}{machine&&(!machine.configured?<p className="p-2 text-xs text-muted-foreground">Доступ выключен — включите в настройках File Gateway</p>:!['connected','configured'].includes(machine.status)?<p className="p-2 text-xs text-muted-foreground">Не в сети</p>:machine.roots.map(root=><Folder key={`${machine.id}:${root}:${version}`} machine={machine} path={root} label={root}/>))}</div>
+  <div className="min-h-0 flex-1 overflow-auto p-2">{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}{machine&&(!machine.configured?<p className="p-2 text-xs text-muted-foreground">Доступ выключен — включите в настройках File Gateway</p>:!['connected','configured'].includes(machine.status)?<p className="p-2 text-xs text-muted-foreground">Не в сети</p>:machine.roots.map(root=><Folder key={`${machine.id}:${root}:${version}`} machine={machine} path={root} label={root} initialOpen/>))}</div>
  </div>;
 }

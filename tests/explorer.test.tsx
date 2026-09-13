@@ -7,9 +7,9 @@ afterEach(cleanup);
 test('tree targets selected host and inserts native mention without replacing draft',async()=>{
  const app=await loadPluginApp(()=>import('../app.js'));const calls:unknown[]=[];
  const slot=renderSlot(app.threadPanelActions.find(a=>a.id==='explorer')!,{threadId:'thread',params:null},{composer:{text:'Read this'},rpc:{machines:()=>[{id:'mini',name:'Mini',status:'connected',roots:['/shared'],configured:true},{id:'ovh',name:'OVH',status:'connected',roots:['/shared'],configured:true}],list:input=>{calls.push(input);return {path:'/shared',entries:[{name:'a [1].txt',kind:'file'}],nextOffset:null};}}});
- await slot.findByText('Mini');fireEvent.change(slot.getByRole('combobox'),{target:{value:'ovh'}});fireEvent.click(slot.getByRole('button',{name:'▸ /shared'}));
+ await slot.findByText('Mini');fireEvent.change(slot.getByRole('combobox'),{target:{value:'ovh'}});
  fireEvent.click(await slot.findByRole('button',{name:'В чат: OVH:/shared/a [1].txt'}));
- expect(calls).toEqual([{hostId:'ovh',path:'/shared',offset:0}]);expect(slot.composer.mentions).toHaveLength(1);expect(decodeReference(slot.composer.mentions[0].id)).toEqual({hostId:'ovh',path:'/shared/a [1].txt'});expect(slot.composer.text).toContain('Read this');
+ expect(calls).toEqual([{hostId:'mini',path:'/shared',offset:0},{hostId:'ovh',path:'/shared',offset:0}]);expect(slot.getByRole('button',{name:'▾ /shared'}).getAttribute('aria-expanded')).toBe('true');expect(slot.composer.mentions).toHaveLength(1);expect(decodeReference(slot.composer.mentions[0].id)).toEqual({hostId:'ovh',path:'/shared/a [1].txt'});expect(slot.composer.text).toContain('Read this');
 });
 test('connection form sends password only on save and never renders stored secret',async()=>{
  const app=await loadPluginApp(()=>import('../app.js'));let saved:any;
