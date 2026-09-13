@@ -7,9 +7,7 @@ Status: **0.1.0-beta.2**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses expe
 ## Install and configure
 
 ```sh
-npm ci
-bb plugin build
-bb plugin install . --yes
+bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@v0.1.0-beta.2 --yes
 ```
 
 Open **Settings → File Gateway → Доступ к файлам**. Each enrolled machine has its own card and three modes:
@@ -20,7 +18,7 @@ Open **Settings → File Gateway → Доступ к файлам**. Each enroll
 
 Changes save immediately; folder selections survive switching modes. New machines start disabled. Folder browsing targets the selected machine, including from the remote web client. Offline machines can be configured by entering absolute paths. The transfer size setting is under **Передача файлов**.
 
-Settings are stored in plugin KV `config-v2`, with revision checks to prevent stale browser tabs overwriting newer edits. The unpublished beta.1 installation was migrated in place before removing its JSON setting; beta.1 was never distributed. New installs need no migration. Raw JSON is not displayed in the settings page.
+Settings are stored in plugin KV `config-v2`, with revision checks to prevent stale browser tabs overwriting newer edits. New installs start with all machines disabled. Raw JSON is not displayed in the settings page.
 
 ## Use
 
@@ -60,10 +58,12 @@ Tests use the public SDK backend and host harnesses and real temporary files. Th
 
 Source layout: `app.tsx` — native settings section with vendored BB controls; `configuration.ts` — validated settings RPC; `server.ts` — settings/CLI/tool and relay; `host.ts` — host-local file operations; `policy.ts` — containment and exclusions; `contract.ts` — validated host contract. Runtime dependency: Zod. BB deploys the host bundle lazily and verifies it.
 
-See `PLUGIN_OVERVIEW.md` for marketplace copy and `RELEASE.md` for publication steps. The beta is not published by this repository alone.
+See `PLUGIN_OVERVIEW.md` for marketplace copy and `RELEASE.md` for publication steps. The GitHub release and Community marketplace review are separate.
 
 ## Rollback
 
 Disable with `bb plugin disable file-gateway` or choose Выключено for each machine in Settings. Disable disposes active host workers through BB lifecycle. Re-enable/reinstall the previous tag to roll back a future update. Disabling does not delete completed imports. No core BB patches are required.
 
 Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. In selected-folders mode BB databases, exported history, credentials and session stores remain excluded. Full computer mode does not apply these filters.
+
+The initial settings UI uses Russian labels; this README explains their English equivalents.

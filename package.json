@@ -8,9 +8,9 @@
   },
   "bb": {
     "name": "File Gateway",
-    "description": "Read and transfer files between enrolled BB machines through the existing private host connection.",
+    "description": "Read files on another BB machine and copy them to the computer where your agent is working.",
     "branding": {
-      "icon": "Folder"
+      "icon": "./assets/icon.svg"
     },
     "server": "./server.ts",
     "host": "./host.ts",
@@ -48,5 +48,17 @@
     "build": "bb plugin build",
     "test:ui": "vitest run tests/settings.test.tsx"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "author": {
+    "name": "VKirill",
+    "url": "https://github.com/VKirill"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VKirill/bb-plugin-file-gateway.git"
+  },
+  "homepage": "https://github.com/VKirill/bb-plugin-file-gateway#readme",
+  "bugs": {
+    "url": "https://github.com/VKirill/bb-plugin-file-gateway/issues"
+  }
 }
