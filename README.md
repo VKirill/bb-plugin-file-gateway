@@ -22,7 +22,7 @@ Settings are stored in plugin KV `config-v2`, with revision checks to prevent st
 
 ## File tree and chat references
 
-In a chat or on the New thread screen, open the right panel, choose a new tab, then **Файлы подключений**. Expand a machine or website and its folders. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
+In a chat, click the folder icon in the top header to open **Файлы подключений** in the native right panel. Choose a machine or website from the dropdown above the tree, then expand its folders. On the New thread screen, open the right panel and choose **Файлы подключений** from a new tab. The **＋** button inserts a native mention for a file or directory while preserving your draft. When sent, the mention resolves to its exact source ID and absolute path; no file content or connection password is embedded. The agent reads the referenced file only when needed. Revoked references fail visibly.
 
 ## Website connections
 
