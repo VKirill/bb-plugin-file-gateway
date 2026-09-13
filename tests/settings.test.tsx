@@ -7,7 +7,7 @@ afterEach(cleanup);
 async function setup(fail=false){
  let data:SettingsView={revision:0,maxFileMiB:256,machines:[{id:'mini',name:'Mac mini',status:'connected',policy:{mode:'folders',roots:['/Documents'],deny:[]}}]};
  const app=await loadPluginApp(()=>import('../app.js'));
- const slot=renderSlot(app.settingsSections[0],{}, {rpc:{configuration:()=>data,saveMachine:input=>{
+ const slot=renderSlot(app.settingsSections.find(s=>s.id==='file-access')!,{}, {rpc:{configuration:()=>data,saveMachine:input=>{
   if(fail)throw new Error('Не удалось сохранить');
   const i=input as {policy:SettingsView['machines'][number]['policy']};data={...data,revision:data.revision+1,machines:[{...data.machines[0],policy:i.policy}]};return data;
  },folders:()=>({directory:'/home/me',parent:'/home',entries:[{name:'Documents',path:'/home/me/Documents'}],truncated:false})}});

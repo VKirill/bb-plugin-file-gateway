@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createServer} from 'node:net';
+import FtpSrv from 'ftp-srv';
+import {createFakePluginHost} from '@get-bb/plugin-sdk/testing';
+import plugin from '../server.js';
+import {encodeReference,decodeReference} from '../explorer-contract.js';
+import {remotePath,withRemote,downloadBounded} from '../remote.js';
+import type {Connection} from '../connections-contract.js';
+const base:Connection={id:randomUUID(),name:'Test site',protocol:'ftp',hostname:'127.0.0.1',port:21,username:'fixture',root:'/',enabled:true};
+test('remote reference preserves special characters and distinguishes hosts',()=>{const path='/папка/a [1] #?.txt';assert.deepEqual(decodeReference(encodeReference({hostId:'one',path})),{hostId:'one',path});assert.notEqual(encodeReference({hostId:'one',path}),encodeReference({hostId:'two',path}));assert.throws(()=>decodeReference('invalid'));assert.throws(()=>encodeReference({hostId:'x',path:'/a\nspoof'}));});
+test('remote roots reject escapes and command injection',()=>{const c={...base,root:'/site'};for(const p of ['/site-other/a','/site/../etc/passwd','/site/a\r\nDELE file'])assert.throws(()=>remotePath(c,p));assert.equal(remotePath(c,'/site/a/../file'),'/site/file');});
+test('mention resolves address only and revoked reference blocks sending',async t=>{const {bb,harness}=createFakePluginHost({pluginId:'file-gateway',settings:{connectionVault:JSON.stringify({[base.id]:'fixture-password'})}});plugin(bb);t.after(()=>harness.lifecycle.dispose());await bb.storage.kv.set('connections-v1',[base]);const provider=harness.registrations.mentionProviders[0];assert.ok(provider);const result=await provider.resolve(encodeReference({hostId:'remote_'+base.id,path:'/hello.txt'}));assert.match(result.context,/remote_/);assert.ok(!result.context.includes('fixture-password'));await bb.storage.kv.set('connections-v1',[]);await assert.rejects(Promise.resolve().then(()=>provider.resolve(encodeReference({hostId:'remote_'+base.id,path:'/hello.txt'}))));});
+test('FTP real server lists, downloads, enforces byte cap and rejects bad auth',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'gateway-ftp-'));await writeFile(join(root,'hello.txt'),'remote fixture');await writeFile(join(root,'large.bin'),Buffer.alloc(1024,1));
+ const reservation=createServer();await new Promise<void>(r=>reservation.listen(0,'127.0.0.1',r));const port=(reservation.address() as {port:number}).port;await new Promise<void>(r=>reservation.close(()=>r()));
+ const noop=()=>{};const log={child:()=>log,info:noop,warn:noop,error:noop,debug:noop,trace:noop};
+ const ftp=new FtpSrv({url:`ftp://127.0.0.1:${port}`,anonymous:false,log});ftp.on('login',({username,password}:any,resolve:any,reject:any)=>username==='fixture'&&password==='test-only'?resolve({root}):reject(new Error('Denied')));await ftp.listen();
+ t.after(async()=>{await ftp.close();await rm(root,{recursive:true,force:true});});
+ const c={...base,port};const entries=await withRemote(c,'test-only',r=>r.list('/'));assert.ok(entries.some(e=>e.name==='hello.txt'&&e.kind==='file'));
+ assert.equal((await downloadBounded(c,'test-only','/hello.txt',100)).toString(),'remote fixture');
+ await assert.rejects(downloadBounded(c,'test-only','/large.bin',32));await assert.rejects(withRemote(c,'wrong',r=>r.list('/')));
+});
+test('SFTP real server verifies fingerprint and reads a remote file',async t=>{
+ const {Server,utils}=(await import('ssh2')).default;const {generateKeyPairSync,createHash}=await import('node:crypto');
+ const key=generateKeyPairSync('rsa',{modulusLength:2048}).privateKey.export({format:'pem',type:'pkcs1'});const parsed=utils.parseKey(key);if(parsed instanceof Error)throw parsed;
+ const fingerprint=createHash('sha256').update(parsed.getPublicSSH()).digest('hex');const content=Buffer.from('sftp fixture');
+ const server=new Server({hostKeys:[key]},client=>{client.on('error',()=>{});client.on('authentication',ctx=>{if(ctx.method==='password'&&ctx.username==='fixture'&&ctx.password==='test-only')ctx.accept();else ctx.reject();});client.on('ready',()=>client.on('session',accept=>{const session=accept();session.on('sftp',acceptSftp=>{const s=acceptSftp();let listed=false;
+ s.on('REALPATH',(id,path)=>s.name(id,[{filename:path,longname:path,attrs:{mode:0o40755,uid:0,gid:0,size:0,atime:0,mtime:0}}]));s.on('STAT',(id)=>s.attrs(id,{mode:0o100644,size:content.length,uid:0,gid:0,atime:0,mtime:0}));s.on('LSTAT',(id)=>s.attrs(id,{mode:0o100644,size:content.length,uid:0,gid:0,atime:0,mtime:0}));s.on('OPENDIR',id=>s.handle(id,Buffer.from('dir')));s.on('READDIR',id=>{if(listed)s.status(id,1);else{listed=true;s.name(id,[{filename:'hello.txt',longname:'-rw-r--r-- 1 user group 12 Jan 1 2026 hello.txt',attrs:{mode:0o100644,size:content.length,uid:0,gid:0,atime:0,mtime:0}}]);}});s.on('OPEN',id=>s.handle(id,Buffer.from('file')));s.on('READ',(id,_h,offset,length)=>offset>=content.length?s.status(id,1):s.data(id,content.subarray(offset,offset+length)));s.on('CLOSE',id=>s.status(id,0));});}));});
+ await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise<void>(r=>server.close(()=>r())));
+ const c={...base,protocol:'sftp' as const,port:(server.address() as {port:number}).port,fingerprint};assert.equal((await downloadBounded(c,'test-only','/hello.txt',100)).toString(),'sftp fixture');await assert.rejects(downloadBounded({...c,fingerprint:'0'.repeat(64)},'test-only','/hello.txt',100));
+});
+test('FTPS verifies certificate and downloads over TLS with a trusted CA',async t=>{
+ const {execFile}=await import('node:child_process');const {promisify}=await import('node:util');const exec=promisify(execFile);const {readFile}=await import('node:fs/promises');
+ const root=await mkdtemp(join(tmpdir(),'gateway-ftps-'));t.after(()=>rm(root,{recursive:true,force:true}));await writeFile(join(root,'hello.txt'),'tls fixture');
+ const key=join(root,'key.pem'),cert=join(root,'cert.pem');await exec('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost']);
+ const reservation=createServer();await new Promise<void>(r=>reservation.listen(0,'127.0.0.1',r));const port=(reservation.address() as {port:number}).port;await new Promise<void>(r=>reservation.close(()=>r()));
+ const noop=()=>{};const log={child:()=>log,info:noop,warn:noop,error:noop,debug:noop,trace:noop};const ftp=new FtpSrv({url:`ftp://127.0.0.1:${port}`,tls:{key:await readFile(key),cert:await readFile(cert)},anonymous:false,log});ftp.on('login',({password}:any,resolve:any,reject:any)=>password==='test-only'?resolve({root}):reject(new Error('Denied')));await ftp.listen();t.after(()=>ftp.close());
+ const c={...base,protocol:'ftps' as const,port};await assert.rejects(downloadBounded(c,'test-only','/hello.txt',100));
+ const source=`import {downloadBounded} from './remote.ts'; const data=await downloadBounded(${JSON.stringify(c)},'test-only','/hello.txt',100); if(data.toString()!=='tls fixture')throw new Error('Mismatch');`;
+ await exec(process.execPath,['--import=tsx','--input-type=module','-e',source],{cwd:process.cwd(),env:{...process.env,NODE_EXTRA_CA_CERTS:cert},timeout:20000});
+});

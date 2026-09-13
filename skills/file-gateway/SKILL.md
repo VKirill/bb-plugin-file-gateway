@@ -1,6 +1,6 @@
 ---
 name: file-gateway
-description: Read or download files from another enrolled BB machine, or transfer a file between machines. Use when a user references a file on Mac, Linux, or another BB host.
+description: Read or download files from another enrolled BB machine, or transfer a file between machines. Use for remote file mentions, files on Mac/Linux BB hosts, or configured FTP/FTPS/SFTP website connections.
 ---
 
 # File Gateway
@@ -30,3 +30,7 @@ Access modes are configured by the operator in Settings → File Gateway using m
 Install/reload tools and skills apply at the next provider session construction. The CLI is available immediately after plugin activation.
 
 Conversation supporting files under `.bb/chats/thr_*/artifacts`, `notes` and `tmp` may be shared when inside an allowed root. In selected-folders mode BB databases, exported history, credentials and session stores remain excluded. These sensitive-name exclusions apply only in selected-folders mode.
+
+## Website and chat references
+
+Native file mentions resolve to a source ID and path. Honor both exactly; identical paths on different sources are different files. `hosts` also includes configured website accounts with `remote_<uuid>` IDs. Use those IDs with the same list/read/copy commands. Only BB machines can receive copies. Website operations run on the main BB server, use stored credentials internally, and are limited to 32 MiB per file and 60 seconds. A remote enabled/connected entry is configuration, not proof of reachability. Do not request the password in chat, inspect the secret vault, or expose credentials. Ask the user to configure missing accounts in Settings → File Gateway → FTP и SFTP. These operations cannot edit, upload or delete site files.

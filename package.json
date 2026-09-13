@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-file-gateway",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "type": "module",
   "engines": {
     "bb": ">=0.43",
@@ -8,7 +8,7 @@
   },
   "bb": {
     "name": "File Gateway",
-    "description": "Read files on another BB machine and copy them to the computer where your agent is working.",
+    "description": "Browse BB machines and FTP/SFTP sites, add remote file mentions to chats, and let agents read or download the right file.",
     "branding": {
       "icon": "./assets/icon.svg"
     },
@@ -20,33 +20,38 @@
     "app": "./app.tsx"
   },
   "dependencies": {
-    "zod": "^4.3.6",
-    "@radix-ui/react-slot": "^1.3.0"
+    "@radix-ui/react-slot": "^1.3.0",
+    "basic-ftp": "^6.2.1",
+    "ssh2-sftp-client": "^12.1.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@get-bb/plugin-sdk": "0.4.87",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.0.0",
-    "better-sqlite3": "^12.0.0",
-    "cron-parser": "^5.10.1",
-    "hono": "^4.13.7",
-    "tsx": "^4.20.0",
-    "typescript": "^5.7.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.4.0",
+    "@types/ssh2": "^1.15.6",
+    "@types/ssh2-sftp-client": "^9.0.6",
+    "better-sqlite3": "^12.0.0",
     "class-variance-authority": "^0.7.1",
-    "vitest": "^3.2.0",
+    "clsx": "^2.1.1",
+    "cron-parser": "^5.10.1",
+    "ftp-srv": "^4.6.3",
+    "hono": "^4.13.7",
     "jsdom": "^26.0.0",
-    "@testing-library/react": "^16.3.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.4.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
   },
   "scripts": {
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "bb plugin build",
-    "test:ui": "vitest run tests/settings.test.tsx"
+    "test:ui": "vitest run tests/*.test.tsx"
   },
   "license": "MIT",
   "author": {

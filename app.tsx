@@ -1,3 +1,5 @@
+import {ConnectionSettings} from './connections-ui.js';
+import {GatewayExplorer} from './explorer.js';
 import React,{useEffect,useState} from 'react';
 import {definePluginApp,useRpc} from '@get-bb/plugin-sdk/app';
 import type {uiContract,SettingsView} from './configuration.js';
@@ -65,4 +67,4 @@ export function GatewaySettings(){
   <p role="status" className="min-h-4 text-xs text-muted-foreground">{busy?'Сохранение…':saved?'Сохранено. Настройки применяются сразу.':''}</p>
  </div>;
 }
-export default definePluginApp(app=>{app.slots.settingsSection({id:'file-access',title:'Доступ к файлам',component:GatewaySettings});});
+export default definePluginApp(app=>{app.slots.threadPanelAction({id:'explorer',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.experimental_newThreadPanelAction({id:'explorer-new',title:'Файлы подключений',layout:'flush',component:GatewayExplorer});app.slots.settingsSection({id:'connections',title:'FTP и SFTP',component:ConnectionSettings});app.slots.settingsSection({id:'file-access',title:'Доступ к файлам',component:GatewaySettings});});
