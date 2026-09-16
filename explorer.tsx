@@ -3,6 +3,7 @@ import {useRpc,useComposer,useBbNavigate,useBbContext} from '@get-bb/plugin-sdk/
 import type {explorerContract} from './explorer-contract.js';
 import {encodeReference} from './reference.js';
 import {beginFileDrag,endFileDrag} from './drag-to-chat.js';
+import {useFolderLinkBridge} from './chat-folder-links.js';
 import {ExplorerIcon,fileIcon} from './explorer-icons.js';
 import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from './components/ui/select.js';
 import {Button} from './components/ui/button.js';
@@ -32,7 +33,7 @@ function Folder({machine,path,label,initialOpen=false,showHidden}:{machine:Machi
  </div>;
 }
 export function GatewayHeaderButton(){
- const navigate=useBbNavigate();
+ const navigate=useBbNavigate();useFolderLinkBridge();
  return <Button type="button" variant="ghost" size="sm" className="size-7 p-0" aria-label="Open connected files" onClick={()=>navigate.openThreadPanel({actionId:'explorer',title:'Connected Files'})}><ExplorerIcon name="folder" className="size-4"/></Button>;
 }
 export function GatewayExplorer(){

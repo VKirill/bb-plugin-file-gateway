@@ -14,6 +14,10 @@ Working on a server while your document is on a Mac? File Gateway lets your agen
 
 Nothing is shared until you configure it. Selected folders mode excludes common credential paths and symbolic links. Full computer mode opens all files readable by BB, including hidden files and credentials, and follows links. Operating-system permissions still apply.
 
+## Folder view
+
+Click a folder path in a chat message to open it as a panel tab on that chat's machine: breadcrumbs, icons or list, image thumbnails, in-panel preview of images, PDF, video and audio, download to your computer, native mentions and copy path. The same access policy applies as for the rest of the plugin.
+
 ## Beta limits
 
 Requires BB 0.43 or newer and Plugin SDK 0.4.87 or newer. Supports macOS and Linux, files up to 256 MiB, and single-file transfers. No Windows support, recursive folder copies, resumable transfers or arbitrary remote editing yet. Copies persist in the receiving machine's plugin imports folder until you remove them locally.

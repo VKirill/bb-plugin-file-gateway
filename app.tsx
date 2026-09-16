@@ -1,6 +1,8 @@
 import {GatewayDropTarget} from './drag-to-chat.js';
 import {ConnectionSettings} from './connections-ui.js';
 import {GatewayExplorer,GatewayHeaderButton} from './explorer.js';
+import {FolderView} from './folder-view.js';
+import {mountFolderLinks} from './chat-folder-links.js';
 import React,{useEffect,useState} from 'react';
 import {definePluginApp,useRpc} from '@get-bb/plugin-sdk/app';
 import type {uiContract,SettingsView} from './configuration.js';
@@ -68,4 +70,4 @@ export function GatewaySettings(){
   <p role="status" className="min-h-4 text-xs text-muted-foreground">{busy?'Saving…':saved?'Saved. Changes take effect immediately.':''}</p>
  </div>;
 }
-export default definePluginApp(app=>{app.composer.customize({id:'file-drop',banners:[{id:'file-drop',chrome:'bare',component:GatewayDropTarget}]});app.slots.experimental_threadHeaderAction({id:'open-files',title:'Connected Files',component:GatewayHeaderButton});app.slots.threadPanelAction({id:'explorer',title:'Connected Files',layout:'flush',component:GatewayExplorer});app.slots.experimental_newThreadPanelAction({id:'explorer-new',title:'Connected Files',layout:'flush',component:GatewayExplorer});app.slots.settingsSection({id:'connections',title:'FTP and SFTP',component:ConnectionSettings});app.slots.settingsSection({id:'file-access',title:'File access',component:GatewaySettings});});
+export default definePluginApp(app=>{app.composer.customize({id:'file-drop',banners:[{id:'file-drop',chrome:'bare',component:GatewayDropTarget}]});app.slots.experimental_threadHeaderAction({id:'open-files',title:'Connected Files',component:GatewayHeaderButton});app.slots.threadPanelAction({id:'explorer',title:'Connected Files',layout:'flush',component:GatewayExplorer});app.slots.threadPanelAction({id:'folder',title:'Folder',layout:'flush',component:FolderView});app.contentScripts.register({id:'folder-links',mount:mountFolderLinks});app.slots.experimental_newThreadPanelAction({id:'explorer-new',title:'Connected Files',layout:'flush',component:GatewayExplorer});app.slots.settingsSection({id:'connections',title:'FTP and SFTP',component:ConnectionSettings});app.slots.settingsSection({id:'file-access',title:'File access',component:GatewaySettings});});

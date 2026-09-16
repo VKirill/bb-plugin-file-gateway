@@ -1,3 +1,4 @@
+import {posix} from 'node:path';
 import {registerConnections} from './connections.js';
 import {remotePath} from './remote.js';
 import type { BbPluginApi } from '@get-bb/plugin-sdk';
@@ -115,6 +116,24 @@ export default function plugin(bb:BbPluginApi){
   },
   machines:async()=>await run({operation:'hosts'}) as any,
   list:async input=>await run({operation:'list',...input}) as any,
+  resolve:async ({threadId,path:raw})=>{
+   const thread=await bb.sdk.threads.get({threadId});if(!thread.environmentId)throw new Error('This chat has no machine selected');
+   const environment=await bb.sdk.environments.get({environmentId:thread.environmentId});
+   if(!environment.hostId||!environment.path)throw new Error('The chat folder is unavailable');
+   const target=posix.isAbsolute(raw)?posix.normalize(raw):posix.resolve(environment.path,raw);
+   try{await run({operation:'list',hostId:environment.hostId,path:target,offset:0,limit:1});return {hostId:environment.hostId,path:target.replace(/\/+$/,'')||'/',kind:'directory' as const};}
+   catch(error){
+    const {existence}=await bb.sdk.hosts.pathsExist({hostId:environment.hostId,paths:[target]}).catch(()=>({existence:{} as Record<string,boolean>}));
+    if(existence[target])return {hostId:environment.hostId,path:target,kind:'file' as const};
+    throw error instanceof Error&&/not exist|ENOENT|not found/i.test(error.message)?new Error(`Not found on this chat's machine: ${target}`):error;
+   }
+  },
+  folderAssets:async ref=>{
+   if(ref.hostId.startsWith('remote_'))return {baseUrl:null};
+   await run({operation:'list',hostId:ref.hostId,path:ref.path,offset:0,limit:1});
+   const preview=await bb.sdk.files.createPreview({hostId:ref.hostId,rootPath:ref.path,ttlMs:30*60*1000});
+   return {baseUrl:preview.baseUrl};
+  },
  });
  bb.ui.registerMentionProvider({id:'files',label:'File Gateway',search:()=>[],resolve:async id=>{
   const ref=decodeReference(id);if(ref.hostId.startsWith('remote_')){const {connection}=await remotes.get(ref.hostId.slice(7));remotePath(connection,ref.path);return {context:JSON.stringify({kind:'file-gateway-reference',connection:connection.name,protocol:connection.protocol,...ref,instructions:'Use bb_file_gateway list/read/copy with this exact hostId and path. This is a remote connection, not a local filesystem path. Credentials are managed by the gateway; never request or expose them.'})};}const cfg=await configuration();const machine=(await bb.sdk.hosts.list()).find(h=>h.id===ref.hostId);
