@@ -8,6 +8,7 @@ import {encodeReference} from './reference.js';
 import {ExplorerIcon, fileIcon} from './explorer-icons.js';
 import {Button} from './components/ui/button.js';
 import {Icon} from './components/ui/icon.js';
+import {zipSync} from 'fflate';
 import {assetUrl, crumbs, fileKind, joinPath} from './folder-links.js';
 
 type Entry = {name: string; kind: 'file' | 'directory' | 'other'};
@@ -50,6 +51,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>(() => (localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'));
   const [viewer, setViewer] = useState<string | null>(null);
+  const [zipping, setZipping] = useState(false);
   const [notice, setNotice] = useState(initial?.error ?? '');
   const flash = (text: string) => { setNotice(text); window.setTimeout(() => setNotice((current) => (current === text ? '' : current)), 2500); };
 
@@ -106,6 +108,42 @@ export function FolderView({params}: PluginThreadPanelProps) {
   function copyPath(target: string) {
     void navigator.clipboard.writeText(target).then(() => flash('Path copied'), () => flash('Could not copy the path'));
   }
+  /** Every file of this folder (not its subfolders) in one zip, fetched and packed in the browser. */
+  async function downloadAll() {
+    if (!baseUrl || zipping) return;
+    const names = visible.filter((e) => e.kind === 'file').map((e) => e.name);
+    if (!names.length) return;
+    setZipping(true);
+    try {
+      const files: Record<string, Uint8Array> = {};
+      let done = 0;
+      // A few at a time: fast enough, and the machine serving the files isn't flooded.
+      const queue = [...names];
+      await Promise.all(Array.from({length: Math.min(4, queue.length)}, async () => {
+        for (let name = queue.shift(); name !== undefined; name = queue.shift()) {
+          const response = await fetch(assetUrl(baseUrl, name));
+          if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
+          files[name] = new Uint8Array(await response.arrayBuffer());
+          setNotice(`Packing ${++done} of ${names.length}…`);
+        }
+      }));
+      // Stored, not deflated: photos and videos don't shrink, and storing is instant.
+      const blob = new Blob([zipSync(files, {level: 0})], {type: 'application/zip'});
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `${path.split('/').filter(Boolean).pop() || 'folder'}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
+      flash(`Downloaded ${names.length} files`);
+    } catch (e) {
+      setNotice(`Could not pack the folder: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setZipping(false);
+    }
+  }
   function setMode(next: 'grid' | 'list') { setView(next); localStorage.setItem(VIEW_KEY, next); }
 
   if (!initial) return <p className="p-4 text-sm text-muted-foreground">No folder selected.</p>;
@@ -115,7 +153,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
     const target = joinPath(path, entry.name);
     const link = entry.kind === 'file' ? url(entry.name) : null;
     return (
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100">
+      <div className="flex shrink-0 items-center gap-0.5">
         {link ? <Button size="sm" variant="ghost" className="size-6 p-0" aria-label={`Download ${entry.name}`} onClick={(e) => { e.stopPropagation(); void download(link, entry.name); }}><Icon name="Download" className="size-3.5"/></Button> : null}
         <Button size="sm" variant="ghost" className="size-6 p-0" aria-label={`Add to chat: ${target}`} onClick={(e) => { e.stopPropagation(); addToChat(target); }}><ExplorerIcon name="plus" className="size-3.5"/></Button>
         <Button size="sm" variant="ghost" className="size-6 p-0" aria-label={`Copy path ${target}`} onClick={(e) => { e.stopPropagation(); copyPath(target); }}><Icon name="Copy" className="size-3.5"/></Button>
@@ -124,7 +162,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col" aria-label="Folder">
+    <div className="relative flex h-full min-h-0 flex-col" aria-label="Folder">
       <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
         <div className="flex items-center gap-1">
           <ExplorerIcon name={hostId.startsWith('remote_') ? 'globe' : 'server'} className="size-4 text-muted-foreground"/>
@@ -134,6 +172,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
             <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Refresh" onClick={() => void load()}><ExplorerIcon name="refresh" className={`size-4 ${busy ? 'animate-spin' : ''}`}/></Button>
             <Button size="sm" variant={view === 'grid' ? 'secondary' : 'ghost'} className="size-7 p-0" aria-label="Icons" aria-pressed={view === 'grid'} onClick={() => setMode('grid')}><Icon name="GridView" className="size-4"/></Button>
             <Button size="sm" variant={view === 'list' ? 'secondary' : 'ghost'} className="size-7 p-0" aria-label="List" aria-pressed={view === 'list'} onClick={() => setMode('list')}><Icon name="ListView" className="size-4"/></Button>
+            <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Download all files as a zip" disabled={!baseUrl || zipping || !visible.some((e) => e.kind === 'file')} onClick={() => void downloadAll()}><Icon name={zipping ? 'Spinner' : 'Download'} className={`size-4 ${zipping ? 'animate-spin' : ''}`}/></Button>
             <Button size="sm" variant="ghost" className="size-7 p-0" aria-label={`Add folder to chat: ${path}`} onClick={() => addToChat(path)}><ExplorerIcon name="plus" className="size-4"/></Button>
           </div>
         </div>
@@ -172,7 +211,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
                   <div className="flex min-w-0 items-center gap-1 px-2 py-1.5">
                     <span className="min-w-0 flex-1 truncate text-xs">{entry.name}</span>
                   </div>
-                  <div className="absolute right-1 top-1 rounded-md bg-background/90">{actions(entry)}</div>
+                  <div className="absolute right-1 top-1 rounded-md border border-border bg-background text-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100">{actions(entry)}</div>
                 </div>
               );
             })}
@@ -185,7 +224,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
                 onClick={() => open(entry)} onKeyDown={(e) => { if (e.key === 'Enter') open(entry); }}>
                 <ExplorerIcon name={entry.kind === 'directory' ? 'folder' : fileIcon(entry.name)} className="size-4 text-muted-foreground"/>
                 <span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span>
-                {actions(entry)}
+                <div className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100">{actions(entry)}</div>
               </div>
             ))}
           </div>
@@ -196,6 +235,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
         <MediaViewer
           names={media}
           name={viewer}
+          folder={path.split('/').filter(Boolean).pop() || '/'}
           baseUrl={baseUrl}
           onChange={setViewer}
           onClose={() => setViewer(null)}
@@ -206,7 +246,7 @@ export function FolderView({params}: PluginThreadPanelProps) {
   );
 }
 
-function MediaViewer({names, name, baseUrl, onChange, onClose, onOpen}: {names: string[]; name: string; baseUrl: string; onChange: (name: string) => void; onClose: () => void; onOpen: (name: string) => void}) {
+function MediaViewer({names, name, folder, baseUrl, onChange, onClose, onOpen}: {names: string[]; name: string; folder: string; baseUrl: string; onChange: (name: string) => void; onClose: () => void; onOpen: (name: string) => void}) {
   const index = names.indexOf(name);
   const step = (delta: number) => { if (names.length > 1) onChange(names[(index + delta + names.length) % names.length]); };
   useEffect(() => {
@@ -222,14 +262,18 @@ function MediaViewer({names, name, baseUrl, onChange, onClose, onOpen}: {names: 
   const kind = fileKind(name);
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-background" role="dialog" aria-label={name}>
-      <div className="flex items-center gap-1 border-b border-border px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-border px-2 py-2">
+        <span title="Back to the folder (Esc)" className="flex min-w-0 max-w-[40%] shrink-0">
+          <Button size="sm" variant="ghost" className="h-7 min-w-0 gap-1 px-1.5" aria-label={`Back to the folder ${folder}`} onClick={onClose}>
+            <Icon name="ChevronLeft" className="size-4 shrink-0"/><span className="truncate text-sm">{folder}</span>
+          </Button>
+        </span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
         {names.length > 1 ? <span className="text-xs text-muted-foreground">{index + 1} / {names.length}</span> : null}
         <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Previous" disabled={names.length < 2} onClick={() => step(-1)}><Icon name="ChevronLeft" className="size-4"/></Button>
         <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Next" disabled={names.length < 2} onClick={() => step(1)}><Icon name="ChevronRight" className="size-4"/></Button>
         <Button size="sm" variant="ghost" className="size-7 p-0" aria-label={`Download ${name}`} onClick={() => void download(src, name)}><Icon name="Download" className="size-4"/></Button>
         <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Open in a tab" onClick={() => onOpen(name)}><Icon name="ExternalLink" className="size-4"/></Button>
-        <Button size="sm" variant="ghost" className="size-7 p-0" aria-label="Close" onClick={onClose}><Icon name="X" className="size-4"/></Button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted/30 p-3">
         {kind === 'image' ? <img src={src} alt={name} className="max-h-full max-w-full rounded-md object-contain shadow-sm"/> : null}

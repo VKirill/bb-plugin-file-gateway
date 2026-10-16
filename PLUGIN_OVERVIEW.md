@@ -23,3 +23,5 @@ Click a folder path in a chat message to open it as a panel tab on that chat's m
 Requires BB 0.43 or newer and Plugin SDK 0.4.87 or newer. Supports macOS and Linux, files up to 256 MiB, and single-file transfers. No Windows support, recursive folder copies, resumable transfers or arbitrary remote editing yet. Copies persist in the receiving machine's plugin imports folder until you remove them locally.
 
 Website transfers are read-only, up to 32 MiB, and originate from the BB server. FTPS verifies certificates; SFTP verifies a configured SHA-256 host-key fingerprint and supports password authentication. No website uploads or edits. The interface, documentation and agent instructions are in English.
+
+The folder toolbar can download the visible files in the current folder as a ZIP archive. Subfolders are not included. Use the media viewer’s back button to return to the folder.

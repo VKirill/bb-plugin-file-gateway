@@ -97,7 +97,7 @@ test('offline source fails before host calls',async t=>{
  const r=await harness.behavior.runCli(['read','source',path.join(src.shares,'x')]);assert.equal(r.exitCode,1);assert.match(r.stderr!,/offline/);
 });
 test('public SDK only',async()=>{
- const result=await experimental_scanPublicSdkOnly(path.resolve('.'),{allow:['@hugeicons/react','@hugeicons/core-free-icons','@radix-ui/react-select','basic-ftp','ssh2-sftp-client','ftp-srv','ssh2','react','@radix-ui/react-slot','class-variance-authority','clsx','tailwind-merge','vitest','@testing-library/react'].map(x=>new RegExp('^'+x+'$'))});assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
+ const result=await experimental_scanPublicSdkOnly(path.resolve('.'),{allow:['@hugeicons/react','@hugeicons/core-free-icons','@radix-ui/react-select','basic-ftp','fflate','ssh2-sftp-client','ftp-srv','ssh2','react','@radix-ui/react-slot','class-variance-authority','clsx','tailwind-merge','vitest','@testing-library/react'].map(x=>new RegExp('^'+x+'$'))});assert.deepEqual(result.violations,[]);assert.deepEqual(result.privateDependencies,[]);
 });
 
 test('conversation artifacts can be shared without exposing BB history or credentials',()=>{

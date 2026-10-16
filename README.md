@@ -7,12 +7,12 @@
 
 > Read, browse, and transfer files between enrolled BB machines and FTP/SFTP sites using BB's existing private host RPC connection. No SSH setup, public HTTP server, or additional daemon installation is required.
 
-Status: **0.1.0-beta.5**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
+Status: **0.1.1**, macOS/Linux. BB >=0.43, Plugin SDK >=0.4.87. Uses experimental public host RPC APIs.
 
 ## Install and configure
 
 ```sh
-bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@v0.1.0-beta.4 --yes
+bb plugin install git:https://github.com/VKirill/bb-plugin-file-gateway.git@^0.1.1 --yes
 ```
 
 Open **Settings → File Gateway → File access**. Each enrolled machine has its own card and three modes:
@@ -33,7 +33,7 @@ In a chat, click the folder icon in the top header to open **Connected Files** i
 
 Click a folder path written in a chat message — for example `artifacts/vk-post-autumn` or an absolute path — and the folder opens as a tab in the right panel, on the machine and in the folder of that chat. BB has no extension point for chat links, so a content script catches the click on paths without a file extension; a BB update that changes chat markup disables the interception without affecting the rest of the plugin. Paths with an extension keep BB's own behaviour.
 
-The folder tab shows breadcrumbs, icons or a list (the choice is remembered in this browser), and image thumbnails. Clicking an image, PDF, video or audio file opens it inside the panel with arrow-key navigation between media files; other files open in BB's file viewer, so Markdown opens in whatever editor you use for it. Each row has **Download** (saves to your computer through a temporary preview URL), **＋** (native mention in the chat) and **Copy path**. Folder listings and the temporary URL follow the same access policy as the rest of the plugin: disabled machines, excluded roots and sensitive-name filters apply. Websites (FTP/FTPS/SFTP) list and open files but have no thumbnails or direct download, because their files are fetched through a copy to a BB machine.
+The folder tab shows breadcrumbs, icons or a list (the choice is remembered in this browser), and image thumbnails. Clicking an image, PDF, video or audio file opens it inside the panel with arrow-key navigation between media files; other files open in BB's file viewer, so Markdown opens in whatever editor you use for it. The header also offers **Download all files as a zip**, which packs the visible files in the current folder in your browser; subfolders are not included. The media viewer has a back button to return to the folder. Each row has **Download** (saves to your computer through a temporary preview URL), **＋** (native mention in the chat) and **Copy path**. Folder listings and the temporary URL follow the same access policy as the rest of the plugin: disabled machines, excluded roots and sensitive-name filters apply. Websites (FTP/FTPS/SFTP) list and open files but have no thumbnails or direct download, because their files are fetched through a copy to a BB machine.
 
 ## Website connections
 
